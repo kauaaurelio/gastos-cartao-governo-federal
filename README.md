@@ -176,8 +176,6 @@ Este projeto **não treina nenhum modelo**, e isso é deliberado: ele é o prime
 
 **Ferramentas:** Python, pandas, matplotlib, Google Colab, Git e GitHub.
 
-**O que este projeto ainda não tem,** e que entra nos próximos: SQL, modelagem com scikit-learn, API, deploy e testes automatizados.
-
 ## Como rodar
 
 1. Baixe os extratos mensais em [Portal da Transparência — CPGF](https://portaldatransparencia.gov.br/download-de-dados/cpgf) e extraia os `.csv` numa pasta.
