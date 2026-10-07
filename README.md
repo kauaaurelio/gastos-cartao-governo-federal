@@ -155,7 +155,26 @@ As dúvidas que os dados não respondem foram encaminhadas à Controladoria-Gera
 
 O pedido questiona o significado do valor "SEM INFORMACAO", a base legal para publicar transações sem identificar o favorecido, se houve classificação formal de sigilo, se existe documentação técnica dos códigos e se a identificação consta dos sistemas de origem. A resposta, ou a ausência dela, será incorporada a este README.
 
-## Técnicas usadas e por quê
+## Como este projeto foi conduzido
+
+Esta análise foi conduzida por mim como orquestrador: eu defini a pergunta, escolhi o recorte, cobrei as verificações e revisei cada resultado antes de aceitá-lo. O código em Python foi escrito com apoio de IA, sob a minha direção — registro isso aqui porque uma análise só vale o que a sua auditoria vale, e a auditoria foi minha.
+
+As decisões que moldaram o resultado, e que não estão no código:
+
+| Decisão | O que eu decidi | Por que isso mudou o resultado |
+|---|---|---|
+| **Escolha da pergunta** | Depois de ver o total do mês, decidi não ficar no ranking de gastos e investigar a fundo as compras *sem favorecido identificado* | O ranking de maiores gastadores é o resultado óbvio e já publicado por todo mundo. O campo vazio de favorecido é o que ninguém estava olhando, e virou a descoberta principal |
+| **Exigir prova de padrão** | Não aceitei a conclusão com um mês só. Pedi os 12 meses antes de afirmar qualquer coisa | Um mês isolado seria anedota. Com 12 meses, a opacidade nunca fica abaixo de 41%, e aí deixa de ser exceção e passa a ser padrão estrutural |
+| **Ordem de trabalho** | Pedir o acesso à informação **antes** de rodar a análise dos meses | O prazo legal de 20 dias começa a correr enquanto a análise avança, em vez de depois dela |
+| **Investigar fora dos dados** | Não me contentei em descrever o campo vazio: fui atrás da base legal e protocolei um pedido de acesso à informação na CGU | A planilha não diz se a omissão é legal. Essa resposta só existe perguntando ao órgão, e é uma etapa que nenhum código resolve |
+| **Enquadramento** | Rejeitei a redação que usava "a lei permite" para amortecer o achado da Presidência. Defini a régua: apontar o número e cobrar explicação pública, sem atribuir intenção | É a diferença entre uma análise que se autocensura e uma que acusa sem prova. A redação final fica no meio: o dado é afirmado, a motivação não é |
+| **Limite ético de exposição** | Analisar por órgão, nunca por servidor. Nomes de pessoa física e MEI ficam fora dos gráficos e dos textos públicos | Os dados trazem nome de portador e de favorecido. Expor indivíduo em vez de instituição transformaria um trabalho de transparência em exposição pessoal |
+| **Rastreabilidade do raciocínio** | Exigi que cada etapa do notebook tivesse a pergunta, o motivo, o método e o que o resultado mostrou, escritos antes e depois de rodar | Sem isso o notebook seria uma pilha de células. Com isso, qualquer pessoa reconstrói a linha de raciocínio, inclusive eu, meses depois |
+| **Revisão crítica da entrega** | Devolvi o que estava confuso ou incompleto: a seção de ranking que não se entendia, uma etapa entregue sem a conclusão escrita, números longos ilegíveis para quem não é técnico | Resultado que o leitor não entende não informa ninguém. Essa revisão é o que reescreveu o README mais de uma vez |
+| **Validação por leitura** | Rodei e li cada saída, em vez de confiar no resumo. Foi assim que as inconsistências apareceram antes da publicação | Aceitar o resultado sem conferir é o jeito mais rápido de publicar um erro com aparência de rigor |
+| **Honestidade sobre o escopo** | Decidi declarar que este projeto não treina nenhum modelo, em vez de vesti-lo de ML | Um portfólio que eu não consigo defender vale menos que nenhum. O que está aqui, eu sustento |
+
+## Técnicas aplicadas na análise
 
 Este projeto **não treina nenhum modelo**, e isso é deliberado: ele é o primeiro de uma sequência em que cada projeto acrescenta uma camada. O que ele exercita é a etapa que antecede qualquer modelo e costuma consumir a maior parte do tempo de um engenheiro de ML na prática.
 
@@ -163,12 +182,12 @@ Este projeto **não treina nenhum modelo**, e isso é deliberado: ele é o prime
 |---|---|---|
 | **Ingestão de dados reais** | Leitura de CSV com separador `;`, codificação `latin1` e vírgula decimal, o padrão brasileiro que quebra a leitura default | Dado de produção raramente vem limpo; errar a codificação ou o decimal corrompe os números em silêncio |
 | **Pipeline reprodutível** | `glob` + laço + `pd.concat` para ler N arquivos, em vez de código repetido por mês | Um novo mês é só um arquivo a mais na pasta. É a diferença entre uma análise que roda de novo e uma que precisa ser reescrita |
-| **Detecção de valores sentinela** | Identificação de `-1`, `-2` e `SEM INFORMACAO` como códigos de preenchimento, não como dados | Valores sentinela entram em modelos como números válidos. Um `-1` tratado como CNPJ real envenena qualquer feature derivada dele |
-| **Análise de dados faltantes** | Verificação de que as 3.926 linhas sem data correspondem exatamente às sigilosas | Dado faltante quase nunca é aleatório. Saber *por que* falta decide se a linha é descartada, imputada ou vira uma feature própria |
+| **Detecção de valores** | Identificação de `-1`, `-2` e `SEM INFORMACAO` como códigos de preenchimento, não como dados | Valores sentinela entram em modelos como números válidos. Um `-1` tratado como CNPJ real envenena qualquer feature derivada dele |
+| **Análise de dados faltantes** | Verificação de que as 3.926 linhas sem data correspondem exatamente às sigilosas, e de que a falta de favorecido se concentra nas compras de maior valor | A ausência aqui não é aleatória: ela depende do valor da compra. Por isso descartar essas linhas enviesaria a análise, em vez de apenas reduzi-la |
 | **Validação por reconciliação** | Soma dos quatro grupos conferida contra o total; cruzamento das categorias retornando zero; releitura isolada de um mês batendo com o conjunto | É o equivalente a um teste: garante que uma transformação não perdeu nem duplicou registros |
 | **Estatística descritiva robusta** | Mediana e quartis em vez de média, porque a distribuição é assimétrica (média R\$ 617,80 contra mediana R\$ 260,00) | Escolher a métrica errada para uma distribuição enviesada produz baselines e avaliações erradas |
 | **Detecção de outliers por IQR** | Limite em Q3 + 1,5 × IQR, critério estatístico em vez de um corte escolhido no olho | Critério reprodutível e defensável, aplicável a qualquer coluna numérica sem ajuste manual |
-| **Detecção de anomalia por distribuição** | Teste de arredondamento (múltiplos de 50) comparando grupos: 80,1% contra 14,0% | Comparar a distribuição de um grupo com a de um grupo de controle é a base de detecção de anomalia e de *data drift* |
+| **Comparação de distribuições** | Teste de arredondamento (múltiplos de 50) comparando grupos: 80,1% contra 14,0% | Comparar um grupo com um grupo de controle é a base de detecção de anomalia e de *data drift*. O objetivo é o mesmo de um detector aprendido; o método aqui é uma regra fixa, não um modelo |
 | **Normalização por denominador** | Taxa por órgão em vez de contagem absoluta, com corte mínimo de 100 compras | É o problema de *base rate*: percentuais sobre amostras pequenas enganam, e foi exatamente o erro que apareceu e foi corrigido aqui |
 | **Agregação multidimensional** | `groupby` e `pivot_table` por órgão, mês e categoria | A forma de construir features agregadas e de fatiar métricas por segmento |
 | **Comunicação de resultado** | Escolha de forma gráfica justificada por tipo de dado, rótulos com a fração ao lado da porcentagem, fonte declarada | Um resultado que o time não entende não vira decisão |
